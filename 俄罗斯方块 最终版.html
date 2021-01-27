@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <title>~俄罗斯方块~</title>
+  <link rel="shortcut icon" href="/Users/creep/Documents/图片/icon.png" type="image/x-icon">
+  <script type="text/javascript">
+
+  </script>
+</head>
+<body>
+  <p class="a">&hearts;&clubs; &Tab;&emsp; 花了快4天，终于弄出来俄罗斯方块了。快做完的时候，还因为把 ‘==’ 号写成 ‘=’ debug 了 2 小时。。。。（捂脸🤦‍）&emsp;&nbsp; &spades;&diams;</p>
+
+  <script>
+  var total_width = 17; // total game width. (16)
+  var display_width = total_width - 1;   // actually displayed game width. suggested width; 10
+  var width = display_width - 6;
+  var total_height = 25;    //(25)
+  var display_height = total_height - 4;
+  var height = display_height - 1;  // suggested height; 20
+  var pixel_w = 25;        // width of each little pixel.
+  var game_speed = 400;
+  var bkgd_color = 'rgb(219, 224, 208)'; // background
+  var block_color = 'rgb(138, 209, 46)';
+  var line_color = 'black';
+  var gameOn = false;
+  var isPaused = true;   //initially, the game is Paused, need to press 'space' to start game.
+  var interval_ID;    // this var is used for clearInterval to work properly.
+  var s = 1;      // dif[1 ~ 4] shows 4 different states of this type of block. i is index for dif.
+  var dif;          // keep track of current block. (pick one from blocks[])
+  var prev = get_random_int_between(1,7);
+  var temp_p;
+  var last_dropped_block = {num: 0, s: 1, j: 1, i: 1}; // when press 'v',
+  var cur = {j: 0, i: 6};
+  var for_setting_top_color = 4; // after 4 ticks of "setInterval", the block is garuanteed to be below the non-displayed area. (Don't want top area to have bkgd_color.)
+  function create2DArray(length_of_array, start_idx) {
+    var arr = [];
+    for (var i=start_idx; i < start_idx + length_of_array; i++) {
+      arr[i] = [];
+    }
+    return arr;
+  }
+  var array = create2DArray(total_height, -3);  // initialize the array used throughout this program!!
+  var blocks = create2DArray(7, 1);      // blocks[]is a list of 7 types of blocks
+  for (var i = 1; i <= 7; i++) {
+    blocks[i] = create2DArray(4, 1);
+  }
+  var j_for_reset_rightSide = height - 7
+  var block_I_didnt_appear = 0; // The number of times that block with shape 'I' didn't appear.
+
+  function initialize_all_blocks(){
+    blocks[1][5] = 1;     // Total num of ststes
+    blocks[1][6] = {j: -1, i: width / 2};
+    blocks[1][7] = '#FDED0C';
+    blocks[1][1][1] = {j: 1, i: 0};
+    blocks[1][1][2] = {j: 1, i: -1};
+    blocks[1][1][3] = {j: 0, i: -1};
+
+    blocks[2][6] = {j: -1, i: width / 2};
+    blocks[2][5] = 4;
+    blocks[2][7] = '#F87400';
+    blocks[2][1][1] = {j: 0, i: 1};
+    blocks[2][1][2] = {j: 0, i: -1};
+    blocks[2][1][3] = {j: 1, i: 0};
+    blocks[2][2][1] = {j: -1, i: 0};
+    blocks[2][2][2] = {j: 0, i: -1};
+    blocks[2][2][3] = {j: 1, i: 0};
+    blocks[2][3][1] = {j: 0, i: 1};
+    blocks[2][3][2] = {j: 0, i: -1};
+    blocks[2][3][3] = {j: -1, i: 0};
+    blocks[2][4][1] = {j: 0, i: 1};
+    blocks[2][4][2] = {j: -1, i: 0};
+    blocks[2][4][3] = {j: 1, i: 0};
+
+    blocks[3][6] = {j: -1, i: width / 2};
+    blocks[3][5] = 2;
+    blocks[3][7] = '#4EBA01';
+    blocks[3][1][1] = {j: 0, i: 1};
+    blocks[3][1][2] = {j: 1, i: 0};
+    blocks[3][1][3] = {j: 1, i: -1};
+    blocks[3][2][1] = {j: 0, i: 1};
+    blocks[3][2][2] = {j: -1, i: 0};
+    blocks[3][2][3] = {j: 1, i: 1};
+
+    blocks[4][6] = {j: 0, i: width / 2};
+    blocks[4][5] = 2;
+    blocks[4][7] = '#0BD6DC';
+    blocks[4][1][1] = {j: 0, i: 1};
+    blocks[4][1][2] = {j: -1, i: 0};
+    blocks[4][1][3] = {j: -1, i: -1};
+    blocks[4][2][1] = {j: -1, i: 0};
+    blocks[4][2][2] = {j: -1, i: 1};
+    blocks[4][2][3] = {j: -2, i: 1};
+    // 橙色 #F87400    黄 #FDED0C     绿 #4CC805   青#0BD6DC   蓝 #3570F9   紫 #A62BF3
+
+    blocks[5][6] = {j: 0, i: width / 2};
+    blocks[5][5] = 4;
+    blocks[5][7] = '#3570F9';
+    blocks[5][1][1] = {j: 0, i: 1};
+    blocks[5][1][2] = {j: 0, i: -1};
+    blocks[5][1][3] = {j: -1, i: -1};
+    blocks[5][2][1] = {j: -1, i: 0};
+    blocks[5][2][2] = {j: 1, i: 0};
+    blocks[5][2][3] = {j: -1, i: 1};
+    blocks[5][3][1] = {j: 0, i: 1};
+    blocks[5][3][2] = {j: 0, i: -1};
+    blocks[5][3][3] = {j: 1, i: 1};
+    blocks[5][4][1] = {j: -1, i: 0};
+    blocks[5][4][2] = {j: 1, i: 0};
+    blocks[5][4][3] = {j: 1, i: -1};
+
+    blocks[6][6] = {j: 0, i: width / 2};
+    blocks[6][5] = 4;
+    blocks[6][7] = '#A62BF3';
+    blocks[6][1][1] = {j: 0, i: 1};
+    blocks[6][1][2] = {j: 0, i: -1};
+    blocks[6][1][3] = {j: -1, i: 1};
+    blocks[6][2][1] = {j: -1, i: 0};
+    blocks[6][2][2] = {j: 1, i: 0};
+    blocks[6][2][3] = {j: 1, i: 1};
+    blocks[6][3][1] = {j: 0, i: 1};
+    blocks[6][3][2] = {j: 0, i: -1};
+    blocks[6][3][3] = {j: 1, i: -1};
+    blocks[6][4][1] = {j: -1, i: 0};
+    blocks[6][4][2] = {j: 1, i: 0};
+    blocks[6][4][3] = {j: -1, i: -1};
+
+    blocks[7][6] = {j: -2, i: width / 2};
+    blocks[7][5] = 2;
+    blocks[7][7] = '#F90B07';  // #FB4428 ?
+    blocks[7][1][1] = {j: -1, i: 0};
+    blocks[7][1][2] = {j: 1, i: 0};
+    blocks[7][1][3] = {j: 2, i: 0};
+    blocks[7][2][1] = {j: 0, i: -1};
+    blocks[7][2][2] = {j: 0, i: 1};
+    blocks[7][2][3] = {j: 0, i: 2};
+  }
+  initialize_all_blocks()
+  function initialize_gameBoard(){
+    for (var j = -3; j <= display_height; j++) {  // render from j =
+      var c = document.createDocumentFragment();  // this line is necessary, idk why...
+      for (var i = 0; i <= display_width; i++) {  // EAGE CASE Careful !!!
+        var e = document.createElement('td');
+        //e.style.backgroundColor = '#'+Math.random().toString(16).substr(-6); // NO color !
+        e.width = pixel_w;
+        e.height = e.width;
+        c.appendChild(e);  //append e to c, then append c to doc.body...
+        var obj = {
+          block: true,
+          ele: e,
+        }
+        array[j][i] = obj;
+      }
+      document.body.appendChild(c);
+      var tr = document.createElement('tr');   // need to create a line break every time...
+      document.body.appendChild(tr);
+    }
+    render_gameBoard();    // prevent rendering the non-displayed area.
+  }
+  initialize_gameBoard();
+  function render_gameBoard(){        // All this function does is to render the display area.
+    clearInterval(interval_ID);
+    gameOn = false;
+    isPaused = true;  // is this line necessary ?
+    for (var j = 1; j <= height; j++) {
+      for (var i = 1; i <= display_width; i++) { // width - 1 here
+        array[j][i].ele.style.backgroundColor = '#'+Math.random().toString(16).substr(-6);
+      }
+    }
+    for (var j = -3; j <= 0; j++) {
+      for (var i = 1; i <= width; i++) { // width - 1 here
+        array[j][i].ele.style.backgroundColor = null;
+      }
+    }
+  }
+  function get_random_int_between(a, b){    // This includes a and b.
+    return a + Math.floor(Math.random() * (b - a + 1));
+  }
+  function render_block(bool){
+    var color = bkgd_color;
+    if (bool) {color = block_color;}
+
+    var j = cur.j;  var i = cur.i;    // These two are index on game board to be rendered.
+    array[j][i].ele.style.backgroundColor = color;
+    // index of the x'th pixel of a block in state s.
+    for (var x = 1; x <= 3; x++) {
+      j = cur.j + dif[s][x].j;
+      i = cur.i + dif[s][x].i;
+      array[j][i].ele.style.backgroundColor = color;
+    }
+  }
+  function render_top_area(){    // To prevent the top non-displayed area to have bkgd_color.
+    for (var j = -3; j <= 0; j++) {
+      for (var i = 1; i <= width; i++) {
+        if (array[j][i].ele.style.backgroundColor === 'rgb(219, 224, 208)') {
+          array[j][i].ele.style.backgroundColor = null;
+        }
+      }
+    }
+  }
+  function reset_cur(bool){// Whether reset cur to top or to right. (True: reset to top area. False: reset to right side)
+    if (bool) {
+      dif = blocks[temp_p];
+      cur.j = dif[6].j;    // Reset cur here. (reset cur position to the top)
+      cur.i = dif[6].i;
+    }else {
+      temp_p = prev;
+      var int = get_random_int_between(1,7);
+      while (int === prev) {int = get_random_int_between(1,7);} //don't want the same block to repeat twice in a row
+      if (block_I_didnt_appear == 12) {
+        int = 7;
+        block_I_didnt_appear = 0;  // This line is necessary
+      }else {
+        if (int != 7) {
+          block_I_didnt_appear ++;
+        }else {
+          block_I_didnt_appear = 0;
+        }
+      }
+      prev = int;    // When resetting block on right side, update prev to record what's "next block".
+      dif = blocks[int];
+      cur.j = j_for_reset_rightSide;
+      cur.i = width + 4;
+    }
+    s = 1;    // reset block state to state 1.
+    for_setting_top_color = 4;
+    block_color = dif[7];
+  }
+  function resetGame(){
+    clearInterval(interval_ID);
+    gameOn = true;         // reset these conditions
+    isPaused = false;
+    for (var j = -3; j <= display_height; j++) {
+      for (var i = 0; i <= display_width; i++) {
+        array[j][i].block = true;
+      }
+    }
+    for (var j = -3; j <= height; j++) {
+      for (var i = 1; i <= width; i++) {
+        array[j][i].block = false;
+      }
+    }
+    for (var j = 1; j <= height; j++) {
+      for (var i = 1; i <= display_width; i++) {
+        array[j][i].ele.style.backgroundColor = bkgd_color;
+      }
+    }
+    for (var j = -3; j <= 0; j++) {
+      for (var i = 1; i <= display_width; i++) {
+        array[j][i].ele.style.backgroundColor = null;
+      }
+    }
+    var x = width + 1;
+    for (var j = 1; j <= height; j++) {
+      array[j][x].ele.style.backgroundColor = line_color;
+    }
+
+    reset_cur(false);
+    render_block(true);
+    reset_cur(true);
+    render_block(true);
+    interval_ID = setInterval(interval_moveBlock, game_speed);
+  }
+  function back_up(){
+    render_block(false);
+    reset_right_side();
+    prev = temp_p;
+    dif = blocks[prev];
+    cur.j = j_for_reset_rightSide;
+    cur.i = width + 4;
+    s = 1;
+    block_color = dif[7];
+    render_block(true);
+    temp_p = last_dropped_block.num;
+    cur.j = last_dropped_block.j;
+    cur.i = last_dropped_block.i;
+    dif = blocks[temp_p];
+    s = last_dropped_block.s;
+    render_block(false);
+    set_block_true(false);
+    reset_cur(true);
+    render_block(true);
+    last_dropped_block.num = 0;   // Doing this to prevent calling back_up() twice and mess up stuff.
+    gameOn = true; // call back_up() after game over can continue this game.
+  }
+  function can_Change_State(tempS){
+    for (var n = 1; n <= 3; n++) {
+      j = dif[tempS][n].j + cur.j;
+      i = dif[tempS][n].i + cur.i;
+      if (array[j][i].block) {return false;}
+    }
+    return true;
+  }
+  function change_state(){
+    var available_states = dif[5];  // total number of available states for current chosen block.
+    if (available_states === 1) { return; }
+
+    var temp_s = s;
+    if (temp_s === available_states) {
+      temp_s = 1;
+    }else {
+      temp_s ++;
+    }
+    if (can_Change_State(temp_s)) {
+      render_block(false);
+      s = temp_s;
+      render_block(true);
+      if (for_setting_top_color) {
+        render_top_area();
+      }
+    }
+  }
+  function can_move_sideways(con){
+    var j = cur.j;
+    var i = cur.i + con;    // Does these two i has bug?
+    if (array[j][i].block) {return false;}
+    for (var n = 1; n <= 3; n++) {
+      j = dif[s][n].j + cur.j;
+      i = dif[s][n].i + cur.i + con;
+      if (array[j][i].block) {return false;}
+    }
+    return true;  // I literally forgot to put return True here.....
+  }
+  function set_block_true(bool){
+    var j = cur.j;  var i = cur.i;    // This function mostly copies from render_block()
+    array[j][i].block = bool;
+    for (var x = 1; x <= 3; x++) {
+      j = cur.j + dif[s][x].j;
+      i = cur.i + dif[s][x].i;
+      array[j][i].block = bool;
+    }
+  }
+  function shift_down_blocks(con){
+    //alert('deleted row: ' + con)
+    for (var i = 1; i <= width; i++){
+      array[con][i].ele.style.backgroundColor = bkgd_color;
+      array[con][i].block = false;
+    }
+    for (var j = con - 1; j >= 1; j--) {
+      for (var i = 1; i <= width; i++) {
+        if (array[j][i].block) {
+          array[j+1][i].ele.style.backgroundColor = array[j][i].ele.style.backgroundColor;
+          array[j+1][i].block = true;
+          array[j][i].ele.style.backgroundColor = bkgd_color;
+          array[j][i].block = false;
+        }
+      }
+    }
+    for (var i = 1; i <= width; i++){
+      array[1][i].ele.style.backgroundColor = bkgd_color;
+      array[1][i].block = false;
+    }
+  }
+  function check_delete_row(){    // it deletes rows if possible, at same time, return weather a row is deleted.
+    var result = false;
+    for (var j = 2; j <= height; j++) {  // j starts at 2. Because if j=1 is occupied by block, game is over.
+      var all_block_in_this_row = true;
+      for (var i = 1; i <= width; i++) {
+        if (array[j][i].block === false) {
+          all_block_in_this_row = false;
+          break;
+        }
+      }
+      if (all_block_in_this_row) {
+        shift_down_blocks(j);
+        result = true;
+      }
+    }
+    return result;
+  }
+  function check_reach_top(){
+    for (var i = 1; i <= width; i++) {
+      if (array[1][i].block) {return true;}
+    }
+    return false;
+  }
+  function reset_right_side(){
+    var oh = j_for_reset_rightSide - 1;
+    for (var j = oh; j <= oh + 4; j++) {
+      for (var i = width + 2; i <= display_width; i++) {
+        array[j][i].ele.style.backgroundColor = bkgd_color;
+      }
+    }
+  }
+  function can_move_downward(){
+    var j = cur.j + 1;
+    var i = cur.i;    // Does these two i has bug?
+    if (array[j][i].block) {
+      set_block_true(true);
+      if ( ! check_reach_top()) {
+        if ( ! check_delete_row()) { // if no row is deleted in this drop,
+          last_dropped_block.num = temp_p;
+          last_dropped_block.s = s;
+          last_dropped_block.j = cur.j;
+          last_dropped_block.i = cur.i;
+        }else {
+          last_dropped_block.num = 0; // if this drop deletes a row, when pressing space bar, nothings gonna happen.
+        }
+        reset_right_side();
+        reset_cur(false);
+        render_block(true);
+        reset_cur(true);
+        render_block(true);
+      }else {
+        game_over()
+      }
+      return false;
+    }
+    for (var n = 1; n <= 3; n++) {
+      j = dif[s][n].j + cur.j + 1;
+      i = dif[s][n].i + cur.i;
+      if (array[j][i].block) {
+        set_block_true(true);
+        if ( ! check_reach_top()) {
+          if ( ! check_delete_row()) { // if no row is deleted in this drop,
+            last_dropped_block.num = temp_p;
+            last_dropped_block.s = s;
+            last_dropped_block.j = cur.j;
+            last_dropped_block.i = cur.i;
+          }else {
+            last_dropped_block.num = 0; // if this drop deletes a row, when pressing space bar, nothings gonna happen.
+          }
+          reset_right_side();
+          reset_cur(false);
+          render_block(true);
+          reset_cur(true);
+          render_block(true);
+        }else {
+          game_over()
+        }
+        return false;
+      }
+    }
+    return true;
+  }
+  function moveBlock(j, i){
+    if (i && j) {alert('sth wrong in moveBlock, at least one of j, i should be zero')}
+    if (i && can_move_sideways(i) || j && can_move_downward()) { // careful here, might excecute can_move_downward() when j is zero. (only excecute can_move_downward() when j is not zero!)
+      render_block(false);
+      cur.j += j;
+      cur.i += i;
+      render_block(true);
+
+      if (for_setting_top_color) {
+        render_top_area();
+        if (j) { for_setting_top_color--; }
+      }
+    }
+  }
+  function interval_moveBlock(){
+    var bool = can_move_downward();
+    if ( bool ) {
+      render_block(false);
+      cur.j += 1;
+      cur.i += 0;
+      render_block(true);
+
+      if (for_setting_top_color) {
+        render_top_area();
+        for_setting_top_color --;
+      }
+    }
+  }
+  function drop_straight_down(){
+    var difference = total_height;  // initialize this to be total_height, prevent
+    var a = [];
+    a.push({j: cur.j, i: cur.i});    // first element get pushed to the 0th index of a.
+    for (var x = 1; x <= 3; x++) {
+      //alert('length a: ' + a.length)
+      var ii = dif[s][x].i + cur.i;
+      var jj = dif[s][x].j + cur.j;
+
+      a.push({j: jj, i: ii});
+      for (var idx = 0; idx < a.length - 1; idx++) { // a.length - 1 ?
+        if (a[idx].i === ii && jj > a[idx].j) {
+          a[idx].j = jj;
+          a.pop();
+          break;
+        }else if (a[idx].i === ii){
+          a.pop();
+          break;
+        }
+      }
+    }
+    //alert('final a length: ' + a.length)
+    for (var idx = 0; idx < a.length; idx++){
+      var e = a[idx];
+      var i = e.i
+      for (var j = e.j + 1; j <= display_height; j++) {  // Here, it must be display_height! row 20 can be bkgd color
+        // ALSO ! for-each loop seems DOES NOT work properly here !!!!
+        if (array[j][i].block && (j - e.j) < difference) {
+          difference = (j - e.j);
+          break;
+        }
+      }
+    }
+    difference --;
+    //alert(difference)
+    render_block(false);
+    cur.j += difference;
+    render_block(true);
+    if (for_setting_top_color) {
+      render_top_area();
+    }
+  }
+
+  function game_over(){
+    clearInterval(interval_ID);
+    isPaused = true;   // here, also set this
+    gameOn = false;
+    alert('Game Over !! HA HA HA');
+  }
+  document.addEventListener('keydown', (event) => {
+    const keyName = event.key;
+    //alert('keydown event\n\n' + 'key: ' + keyName);
+    switch (keyName) {
+      case 'ArrowUp':
+      if (gameOn ) {
+        change_state();
+      }
+      break;
+
+      case 'ArrowRight':
+      if (gameOn && ! isPaused) {
+        moveBlock(0, 1);
+      }
+      break;
+
+      case 'ArrowLeft':
+      if (gameOn && ! isPaused) {
+        moveBlock(0, -1);
+      }
+      break;
+
+      case 'ArrowDown':
+      if (gameOn && ! isPaused) {
+        moveBlock(1, 0);
+      }
+      break;
+
+      case ' ':
+      if (gameOn && ! isPaused) {
+        drop_straight_down();
+      }
+      break;
+
+      case 'x':
+      if (gameOn) {
+        if (isPaused) {
+          interval_ID = setInterval(interval_moveBlock, game_speed);
+        } else {
+          clearInterval(interval_ID);
+        }
+        isPaused = !isPaused;
+      }
+      break;
+
+      case 'z':
+      resetGame();
+      break;
+
+      case 'v':
+      render_gameBoard();
+      break;
+
+      case 'c':
+      if (last_dropped_block.num != 0) {
+        back_up();
+      }
+      break;
+    }
+  });
+
+  /*function drop_straight_down() {
+    var lowest_block_j_on_cur;
+    var list_i = [];
+    var x = -height;
+    for (var i = 1; i <= 3; i++) {
+      var t = dif[s][i].j;
+      if (t > x) {
+        x = t;
+      }
+      list_i[i] = dif[s][i].i + cur.i;
+    }
+    lowest_block_j_on_cur = t + cur.j;
+
+    var heighest_block_j_below = height;
+    for (i in list_i){
+      for (var j = 1; j <= height; j++) {
+        if (array[j][i].ele.style.backgroundColor != bkgd_color && j < heighest_block_j_below) {
+          heighest_block_j_below = j;
+        }
+      }
+    }
+    var difference =  heighest_block_j_below - lowest_block_j_on_cur - 1; // minus 1 is needed here
+    alert(difference)
+    render_block(false);
+    cur.j += difference;
+    render_block(true);
+  }*/
+  /*function drop_straight_down(){
+    var difference = height;  // Must initialize difference to some value. suggested: height.
+    var i = cur.i;
+    for (var j = cur.j + 1; j <= height; j++) {
+      if (array[j][i].ele.style.backgroundColor != bkgd_color && (j - cur.j) < difference) {
+        difference = j - cur.j;
+      }
+    }
+    for (var x = 1; x <= 3; x++) {
+      var b_i = cur.i + dif[s][x].i;
+      var b_j = cur.j + dif[s][x].j;
+      for (var j = 1; j <= height; j++) {
+        if (array[j][b_i].ele.style.backgroundColor != bkgd_color && (j - b_j) < difference) { // Careful here
+          difference = j - b_j;
+        }
+      }
+    }
+    difference --;
+    alert(difference)
+    render_block(false);
+    cur.j += difference;
+    render_block(true);
+  }*/
+</script>
+<h3>&ensp;&emsp;&emsp;&emsp;&emsp;&Tab;'z'： 开始
+  <br>&emsp;&emsp;&emsp;&emsp;&emsp;'x'： 暂停/继续
+  <br>&emsp;&emsp;&emsp;&Tab;'空格'： 落到底&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;'c': 反悔
+  <br>&emsp;&emsp;&emsp;&emsp; &ensp;'v'： 屏幕雪花 </h3>
+
+</body>
+</html>
